@@ -1,5 +1,5 @@
 # SeniorDevFlutterApplication
-Contains project developed for Senior Dev. Flutter Job Application.
+Contains a project developed for Senior Dev. Flutter Job Application.
 
 ## Project prerequisites
 * Python 3.9.5 or compatible version;

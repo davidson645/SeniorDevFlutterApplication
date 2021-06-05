@@ -1,0 +1,163 @@
+
+from flask import json
+import requests
+import flask
+import json
+import io
+from flask.json import jsonify
+from werkzeug.wrappers import request, response
+
+
+app = flask.Flask(__name__)
+app.config["DEBUG"] = False
+
+url = "http://jsonmock.hackerrank.com/api/movies/search/"
+
+
+@app.route("/", methods = ["GET","POST","PUT","PATCH","DELETE"])
+def home():
+    return "<h1> Page Not Found.</h1>"
+
+
+@app.route("/api/movies/search/<Title>/<page>",methods=["GET"])
+def movies(Title=None, page=None):    
+    paramFilter = {"Title": Title, "page": page} 
+    
+    response = requests.get(url,params= paramFilter)
+    print(response.url)
+    data = response.content    
+    return data
+
+@app.route("/api/movies/search/<Title>",methods=["GET"])
+def movies_title(Title=None):    
+    paramFilter = {"Title": Title} 
+    response = requests.get(url,params= paramFilter)
+    print(response.url)
+    data = response.content
+    
+    return data
+
+@app.route("/api/movies/search/page/<page>",methods=["GET"])
+def movies_page(page=None):    
+    paramFilter = {"page": page}     
+    response = requests.get(url,params= paramFilter)
+    print(response.url)
+    
+    data = response.content
+    
+    return data    
+
+@app.route("/api/movies/search/",methods=["GET"])
+def movies_all():      
+    response = requests.get(url)
+    print(response.url)
+    data = response.content
+    
+    return data
+
+@app.route("/api/movies/count/",methods=["GET"])
+def movies_count():     
+    response = requests.get(url)
+    print(response.url)    
+    pageJson = response.content    
+    
+    # Transform HTTP response from bytes JSON to Python Dictionary
+    pageDict = json.loads(pageJson)    
+    
+    years = []              # List sorted in ascending order
+    yearsAux = []           # Auxiliar list to organize list years[]
+    listMoviesByYear = [{}] # List used when counting. It"ll be appended at moviesByYear
+    moviesByYear = {}       # Final result
+    countMovies = 0         # Counter to determine quantity of movies by year
+
+    # Populating with all possible years within response, remove duplicates and sorts in ascending order
+    for i in pageDict["data"]:
+        yearsAux.append(i["Year"])
+    years = list(dict.fromkeys(yearsAux))
+    years.sort() 
+    
+    # Populatin listMoviesByYear with all posible years within HTTP response
+    for year in years:                                        
+        listMoviesByYear.append({"year":year, "movies":0})                       
+    
+    # Removing blank dictionary {} from index 0
+    listMoviesByYear.pop(0)    
+        
+    # Counting movies total and also per year
+    index = 0        
+    for item in listMoviesByYear:                        
+        for movie in pageDict["data"]:
+            if(movie["Year"] == item["year"]):
+                listMoviesByYear[index]["movies"] += 1                                        
+                countMovies += 1
+        index += 1 
+                    
+    moviesByYear = {"moviesByYear": listMoviesByYear,"total":countMovies}    
+    
+    return moviesByYear
+
+@app.route("/api/movies/count/<Title>",methods=["GET"])
+def movies_count_seach(Title=None):     
+    paramFilter = {"Title": Title} 
+    response = requests.get(url,params= paramFilter)    
+    print(response.url)    
+    pageJson = response.content    
+    
+    # Transform HTTP response from bytes JSON to Python Dictionary
+    pageDict = json.loads(pageJson)    
+    
+    totalPages = 0          # Total of pages within HTTP response
+    listMovies = [{}]       # List of all movies within HTTP response
+    years = []              # List sorted in ascending order
+    yearsAux = []           # Auxiliar list to organize list years[]
+    listMoviesByYear = [{}] #List used when counting. It"ll be appended at moviesByYear
+    moviesByYear = {}       #Final result
+    countMovies = 0         # Counter to determine quantity of movies by year
+
+    totalPages = pageDict["total_pages"]
+    if(totalPages > 0):
+        for i in range(1,totalPages):
+            print("Resquest Number: " + str(i))
+            paramFilter = {"Title": Title, "page":i}
+            response = requests.get(url, params= paramFilter)   
+            pageJson = response.content
+            pageDict = json.loads(pageJson)
+            for item in pageDict["data"]:
+                listMovies.append(item)
+    
+    print(listMovies)
+    # Removing blank dictionary {} from index 0        
+    listMovies.pop(0)      
+    
+    # Populating with all possible years within response, remove duplicates and sorts in ascending order
+    index = 0
+    for i in listMovies:
+        yearsAux.append(i["Year"])
+        index += 1
+    years = list(dict.fromkeys(yearsAux))
+    years.sort() 
+
+    # Populatin listMoviesByYear with all posible years within HTTP response
+    for year in years:                                        
+        listMoviesByYear.append({"year":year, "movies":0})                       
+    
+    # Removing blank dictionary {} from index 0
+    listMoviesByYear.pop(0)    
+        
+    # Counting movies total and also per year
+    index = 0        
+    for item in listMoviesByYear:                        
+        for movie in listMovies:
+            if(movie["Year"] == item["year"]):
+                listMoviesByYear[index]["movies"] += 1                                        
+        index += 1 
+        countMovies += 1            
+
+    moviesByYear = {"moviesByYear": listMoviesByYear,"total":countMovies}
+                                                   
+    print(moviesByYear)
+    
+    return moviesByYear
+
+
+app.run(host="0.0.0.0", port=5000)
